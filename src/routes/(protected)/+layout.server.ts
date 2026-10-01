@@ -3,5 +3,6 @@ import { requireAuthenticatedUser } from '$lib/server/http';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-	requireAuthenticatedUser(locals.user);
+	const user = requireAuthenticatedUser(locals.user);
+	return { isAdmin: user.role === 'admin' };
 };

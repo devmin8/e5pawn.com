@@ -7,10 +7,16 @@ import {
 	type RequestHandler
 } from '@sveltejs/kit';
 
+import { INTERNAL_ERROR_MESSAGE } from '$lib/server/errors';
 import { safeResolve } from '$lib/utils/safe-resolve';
 import type { SafeTryResult } from '$lib/utils/safe-try';
 
-type ApiHandler = (event: RequestEvent, user: NonNullable<App.Locals['user']>) => Promise<Response>;
+type RouteParams = Partial<Record<string, string>>;
+
+type ApiHandler<Params extends RouteParams> = (
+	event: RequestEvent<Params>,
+	user: NonNullable<App.Locals['user']>
+) => Promise<Response>;
 
 type ApiError = {
 	message: string;
@@ -26,24 +32,29 @@ export function requireAuthenticatedUser(
 	return user;
 }
 
-export function protectedApi(handler: ApiHandler): RequestHandler {
+export function requireAdmin(user: App.Locals['user']) {
+	const actor = requireAuthenticatedUser(user);
+	if (actor.role !== 'admin') error(403, 'Administrator access required');
+	return actor;
+}
+
+export function protectedApi<Params extends RouteParams>(
+	handler: ApiHandler<Params>
+): RequestHandler<Params> {
 	return async (event) => {
 		const { user } = event.locals;
 		if (!user) {
 			return apiError(401, 'Unauthorized');
 		}
 
-		try {
-			return await handler(event, user);
-		} catch (exception) {
-			// SvelteKit error()/redirect() must be rethrown so the framework can handle them.
-			if (isHttpError(exception) || isRedirect(exception)) {
-				throw exception;
-			}
+		const outcome = await safeResolve(() => handler(event, user));
+		if (outcome.ok) return outcome.result;
 
-			console.error('API request failed', exception);
-			return apiError(500, 'Something went wrong. Please try again.');
-		}
+		// SvelteKit error()/redirect() must be rethrown so the framework can handle them.
+		if (isHttpError(outcome.error) || isRedirect(outcome.error)) throw outcome.error;
+
+		console.error('API request failed', outcome.error);
+		return apiError(500, INTERNAL_ERROR_MESSAGE);
 	};
 }
 

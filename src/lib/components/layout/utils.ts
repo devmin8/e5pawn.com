@@ -14,6 +14,7 @@ type NavLeafItem = {
 	title: string;
 	url: Pathname;
 	items?: never;
+	adminOnly?: boolean;
 };
 
 type NavGroupItem = {
@@ -32,6 +33,11 @@ export const navItems: NavItem[] = [
 	{
 		title: 'Home',
 		url: '/'
+	},
+	{
+		title: 'Users',
+		url: '/users',
+		adminOnly: true
 	}
 ];
 

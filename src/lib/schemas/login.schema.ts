@@ -1,5 +1,7 @@
 import * as v from 'valibot';
 
+import { PASSWORD_MAX_LENGTH } from './password.schema';
+
 export const LoginSchema = v.object({
 	email: v.pipe(
 		v.string(),
@@ -10,7 +12,7 @@ export const LoginSchema = v.object({
 	password: v.pipe(
 		v.string(),
 		v.nonEmpty('Password is required'),
-		v.maxLength(90, 'Password must be 90 characters or fewer')
+		v.maxLength(PASSWORD_MAX_LENGTH, `Password must be ${PASSWORD_MAX_LENGTH} characters or fewer`)
 	)
 });
 

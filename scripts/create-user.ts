@@ -1,7 +1,9 @@
 import { parseArgs } from 'node:util';
 
 import { betterAuth } from 'better-auth/minimal';
+import * as v from 'valibot';
 
+import { CreateUserSchema } from '$lib/schemas/create-user.schema';
 import { createAuthOptions } from '$lib/server/auth/create-auth-options';
 import { createDb } from '$lib/server/db/create-db';
 import { getEnvData } from '$lib/server/env.schema';
@@ -89,20 +91,21 @@ async function main() {
 	if (!email || !name) throw new Error(`--email and --name are required\n\n${usage()}`);
 
 	const password = await promptForPassword();
+	const parsed = v.safeParse(CreateUserSchema, { email, name, password });
+	if (!parsed.success) throw new Error(parsed.issues[0].message);
 
-	// This instance exists only for deployment provisioning. The application Auth instance still has sign-up disabled.
+	// This instance exists only for deployment provisioning.
 	const provisioningAuth = betterAuth({
 		...createAuthOptions({
 			db,
 			baseURL: BETTER_AUTH_URL,
-			secret: BETTER_AUTH_SECRET,
-			disableSignUp: false,
-			autoSignIn: false
+			secret: BETTER_AUTH_SECRET
 		})
 	});
 
-	await provisioningAuth.api.signUpEmail({ body: { email, name, password } });
-	console.log(`Created Better Auth user: ${email}`);
+	// With no HTTP request or session, Better Auth supports trusted server provisioning.
+	await provisioningAuth.api.createUser({ body: { ...parsed.output, role: 'admin' } });
+	console.log(`Created admin: ${email}`);
 }
 
 main().catch((error: unknown) => {

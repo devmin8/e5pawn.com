@@ -27,3 +27,6 @@ vite.config.ts.timestamp-*
 
 # DB
 *.db
+
+# Local scratch (notes, reference checkouts) — never commit
+.misc/

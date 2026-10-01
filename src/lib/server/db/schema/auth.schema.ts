@@ -7,6 +7,12 @@ export const user = sqliteTable('user', {
 	email: text('email').notNull().unique(),
 	emailVerified: integer('email_verified', { mode: 'boolean' }).default(false).notNull(),
 	image: text('image'),
+	role: text('role').notNull().default('user'),
+	// Mapped to Better Auth's access-blocking field; this is our soft-delete flag.
+	inactive: integer('inactive', { mode: 'boolean' }).notNull().default(false),
+	inactiveReason: text('inactive_reason'),
+	inactiveUntil: integer('inactive_until', { mode: 'timestamp_ms' }),
+	mustChangePassword: integer('must_change_password', { mode: 'boolean' }).notNull().default(false),
 	createdAt: integer('created_at', { mode: 'timestamp_ms' })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),
@@ -30,6 +36,7 @@ export const session = sqliteTable(
 			.notNull(),
 		ipAddress: text('ip_address'),
 		userAgent: text('user_agent'),
+		impersonatedBy: text('impersonated_by'),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' })

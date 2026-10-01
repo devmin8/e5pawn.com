@@ -4,8 +4,11 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { authClient } from '$lib/auth-client';
-	import { LoginForm, LoginSchema } from '$lib/components/login';
+	import { LoginForm } from '$lib/components/login';
 	import { ToggleTheme } from '$lib/components/toggle-theme';
+	import { LoginSchema } from '$lib/schemas/login.schema';
+	import type { FormValues } from '$lib/utils/form';
+	import { safeResolve } from '$lib/utils/safe-resolve';
 
 	import type { PageProps } from './$types';
 
@@ -14,8 +17,8 @@
 	let submitting = $state(false);
 	let errorMessage = $state<string | undefined>();
 
-	async function onsubmit(formData: FormData) {
-		const result = v.safeParse(LoginSchema, Object.fromEntries(formData));
+	async function onsubmit(input: FormValues) {
+		const result = v.safeParse(LoginSchema, input);
 
 		if (!result.success) {
 			errorMessage = result.issues[0]?.message ?? 'Please check your sign-in details';
@@ -25,23 +28,23 @@
 		submitting = true;
 		errorMessage = undefined;
 
-		try {
-			const { error } = await authClient.signIn.email(result.output);
-
-			if (error) {
-				errorMessage =
-					error.status === 429
-						? 'Too many sign-in attempts. Try again later.'
-						: error.message || 'Sign in failed';
-				return;
-			}
-
-			await goto(resolve(data.redirectTo as '/'));
-		} catch {
+		const outcome = await safeResolve(() => authClient.signIn.email(result.output));
+		if (!outcome.ok) {
 			errorMessage = 'Unable to sign in. Check your connection and try again.';
-		} finally {
-			submitting = false;
+		} else if (outcome.result.error) {
+			const error = outcome.result.error;
+			errorMessage =
+				error.status === 429
+					? 'Too many sign-in attempts. Try again later.'
+					: error.message || 'Sign in failed';
+		} else {
+			const navigation = await safeResolve(() =>
+				goto(resolve(data.redirectTo as '/'), { invalidateAll: true })
+			);
+			if (!navigation.ok) errorMessage = 'Signed in, but navigation failed. Please reload.';
 		}
+
+		submitting = false;
 	}
 </script>
 

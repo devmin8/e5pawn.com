@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+	// better-auth lists svelte as a peer, so vite-plugin-svelte would inline it; keep it a runtime import.
+	ssr: { external: ['better-auth'] },
 	plugins: [
 		tailwindcss(),
 		sveltekit({

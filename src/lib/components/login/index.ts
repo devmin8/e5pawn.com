@@ -1,4 +1,1 @@
-import LoginForm from './login.svelte';
-import { LoginSchema } from './login-form.schema';
-
-export { LoginForm, LoginSchema };
+export { default as LoginForm } from './login.svelte';

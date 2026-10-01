@@ -1,3 +1,13 @@
+/**
+ * Access is decided by route group, never by path lists:
+ * - `(public)`: anyone.
+ * - `(onboarding)`: signed-in users.
+ * - `(protected)`: signed-in users who have replaced their initial password.
+ *
+ * Feature permissions (e.g. admin) stay in the route via `requireAdmin`.
+ * `/api/auth/*` is Better Auth's and matches no route group; restrict it with `disabledPaths`
+ * in `create-auth-options.ts`, not here.
+ */
 import type { Handle } from '@sveltejs/kit';
 import { error, redirect } from '@sveltejs/kit';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
@@ -25,9 +35,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// route.id is null when SvelteKit matched no file — /api/auth/* (hook-mounted) and unmatched 404s.
 	const id = event.route.id ?? '';
-	const needsLogin = id !== '' && !id.startsWith('/(public)') && !event.locals.user;
+	const user = event.locals.user;
+	const needsLogin = id !== '' && !id.startsWith('/(public)') && !user;
+	const needsPasswordChange = id.startsWith('/(protected)') && !!user?.mustChangePassword;
 
-	if (!needsLogin) {
+	if (!needsLogin && !needsPasswordChange) {
 		return svelteKitHandler({ event, resolve, auth, building });
 	}
 
@@ -38,9 +50,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		);
 	}
 
-	// `/api` on the route (groups stripped) is an endpoint — 401, not a login redirect.
+	// `/api` on the route (groups stripped) is an endpoint — 401/403, not a redirect.
 	const path = id.replace(/\/\([^)]+\)/g, '');
 	const isApiRoute = path === '/api' || path.startsWith('/api/');
+
+	if (needsPasswordChange) {
+		if (isApiRoute) error(403, 'Change your initial password before continuing');
+		redirect(303, '/change-password');
+	}
+
 	if (isApiRoute) error(401, 'Unauthorized');
 
 	redirect(303, loginUrl(event.url));

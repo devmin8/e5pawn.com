@@ -2,6 +2,7 @@
 	import type { ComponentProps } from 'svelte';
 
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
+	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -9,12 +10,16 @@
 	import { authClient } from '$lib/auth-client';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import { isNavGroup, navItems } from '$lib/components/layout/utils';
+	import { safeResolve } from '$lib/utils/safe-resolve';
 
 	type Props = ComponentProps<typeof Sidebar.Root>;
 
 	let { ref = $bindable(null), ...restProps }: Props = $props();
 
 	const pathname = $derived(page.url.pathname);
+	const visibleNavItems = $derived(
+		navItems.filter((item) => isNavGroup(item) || !item.adminOnly || page.data.isAdmin)
+	);
 
 	const sidebar = Sidebar.useSidebar();
 
@@ -27,13 +32,15 @@
 	async function signOut() {
 		if (signingOut) return;
 		signingOut = true;
-		try {
-			closeMobileSidebar();
-			await authClient.signOut();
-			await goto(resolve('/login'));
-		} finally {
-			signingOut = false;
+		closeMobileSidebar();
+		const outcome = await safeResolve(() => authClient.signOut());
+		if (!outcome.ok || outcome.result.error) {
+			toast.error('Unable to sign out. Please try again.');
+		} else {
+			const navigation = await safeResolve(() => goto(resolve('/login'), { invalidateAll: true }));
+			if (!navigation.ok) toast.error('Signed out, but navigation failed. Please reload.');
 		}
+		signingOut = false;
 	}
 </script>
 
@@ -63,7 +70,7 @@
 	<Sidebar.Content>
 		<Sidebar.Group>
 			<Sidebar.Menu>
-				{#each navItems as item (item.title)}
+				{#each visibleNavItems as item (item.title)}
 					<Sidebar.MenuItem>
 						{#if isNavGroup(item)}
 							<Sidebar.MenuButton

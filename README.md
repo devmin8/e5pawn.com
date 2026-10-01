@@ -17,21 +17,22 @@ Chess puzzles app (SvelteKit + SQLite + Better Auth boilerplate).
 - Run `pnpm dev`
 - Open http://e5pawn.localhost in browser.
 
-# DB migration commands
+# Database
 
-- Run `db:push` to push schema changes directly to the database.
-- Run `db:generate` to generate SQL migration files from schema changes.
-- Run `db:migrate` to apply generated migrations to the database.
+During development, run `pnpm db:push` to apply schema changes directly to the disposable database. Do not generate migrations yet.
+
+# User management
+
+Public signup is disabled. Create an admin locally (password prompt):
+
+```bash
+pnpm create-user --email admin@example.com --name "Admin"
+```
+
+Admins manage non-admin accounts at `/users`. New users must replace their initial password before accessing the app. Deactivated users remain listed as Inactive; their data and email are retained.
+
+Route access is set by route group in `src/hooks.server.ts`: `(public)` is open, `(onboarding)` needs sign-in, and `(protected)` also needs the initial password replaced. Admin checks stay in the routes.
 
 # Docker
 
-```bash
-docker compose build
-docker compose up
-```
-
-Open http://localhost:3000. Public signup is disabled; create a user in the running container (password prompt):
-
-```bash
-docker compose exec -it web node build/scripts/create-user.js --email test@test.com --name "Test user"
-```
+Deferred until go-live migrations are prepared; use local development and schema push for now.
