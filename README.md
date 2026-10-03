@@ -21,13 +21,29 @@ Chess puzzles app (SvelteKit + SQLite + Better Auth boilerplate).
 
 During development, run `pnpm db:push` to apply schema changes directly to the disposable database. Do not generate migrations yet.
 
+Once migrations are prepared in `drizzle/`, apply them with:
+
+```bash
+pnpm cli migrate-db
+```
+
+To delete the local database, push the current schema and create an admin:
+
+```bash
+pnpm cli reset-db --email admin@example.com --name "Admin"
+```
+
+The password is prompted for and validated before the database is deleted. Reset supports only local `file:` databases and is disabled when `NODE_ENV=production`.
+
 # User management
 
 Public signup is disabled. Create an admin locally (password prompt):
 
 ```bash
-pnpm create-user --email admin@example.com --name "Admin"
+pnpm cli create-user --email admin@example.com --name "Admin"
 ```
+
+Run `pnpm cli --help` or `pnpm cli <command> --help` for command details. The bundled CLI is available through `node build/cli/main.js` after building.
 
 Admins manage non-admin accounts at `/users`. New users must replace their initial password before accessing the app. Deactivated users remain listed as Inactive; their data and email are retained.
 
