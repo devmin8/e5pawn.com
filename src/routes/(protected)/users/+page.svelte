@@ -2,7 +2,12 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import * as Table from '$lib/components/ui/table';
-	import { AddUserDialog, DeactivateUserDialog, UpdateUserDialog } from '$lib/components/users';
+	import {
+		AddUserDialog,
+		DeactivateUserDialog,
+		ReactivateUserDialog,
+		UpdateUserDialog
+	} from '$lib/components/users';
 	import type { ListedUser } from '$lib/server/users';
 
 	import type { PageProps } from './$types';
@@ -12,6 +17,7 @@
 	let adding = $state(false);
 	let editing = $state(false);
 	let deactivating = $state(false);
+	let reactivating = $state(false);
 	let selectedUser = $state<ListedUser>();
 </script>
 
@@ -79,6 +85,18 @@
 						>
 							Deactivate
 						</Button>
+					{:else}
+						<Button
+							variant="ghost"
+							size="sm"
+							aria-label={`Reactivate ${user.name}`}
+							onclick={() => {
+								selectedUser = user;
+								reactivating = true;
+							}}
+						>
+							Reactivate
+						</Button>
 					{/if}
 				</Table.Cell>
 			</Table.Row>
@@ -97,4 +115,5 @@
 {#if selectedUser}
 	<UpdateUserDialog bind:open={editing} user={selectedUser} />
 	<DeactivateUserDialog bind:open={deactivating} user={selectedUser} />
+	<ReactivateUserDialog bind:open={reactivating} user={selectedUser} />
 {/if}

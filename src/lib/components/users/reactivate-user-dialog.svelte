@@ -19,23 +19,23 @@
 	let submitting = $state(false);
 	let errorMessage = $state<string>();
 
-	async function deactivate() {
+	async function reactivate() {
 		if (submitting) return;
 
 		submitting = true;
 		errorMessage = undefined;
 
-		const outcome = await request(`/api/users/${encodeURIComponent(user.id)}`, {
-			method: 'DELETE'
+		const outcome = await request(`/api/users/${encodeURIComponent(user.id)}/reactivate`, {
+			method: 'POST'
 		});
 
 		if (outcome.ok) {
 			const invalidation = await safeResolve(invalidateAll);
 			open = false;
 			if (invalidation.ok) {
-				toast.success('User is now inactive');
+				toast.success('User is now active');
 			} else {
-				toast.error('User deactivated, but the list could not refresh. Please reload.');
+				toast.error('User reactivated, but the list could not refresh. Please reload.');
 			}
 		} else {
 			errorMessage = outcome.error.message;
@@ -54,10 +54,9 @@
 	{#if open}
 		<Dialog.Content>
 			<Dialog.Header>
-				<Dialog.Title>Deactivate user?</Dialog.Title>
+				<Dialog.Title>Reactivate user?</Dialog.Title>
 				<Dialog.Description>
-					{user.name} will lose access immediately. Their account and data will be retained, and you can
-					reactivate them later.
+					{user.name} will be able to sign in again with their existing password.
 				</Dialog.Description>
 			</Dialog.Header>
 
@@ -70,8 +69,8 @@
 					Cancel
 				</Button>
 
-				<Button variant="destructive" disabled={submitting} onclick={deactivate}>
-					{submitting ? 'Deactivating…' : 'Deactivate user'}
+				<Button disabled={submitting} onclick={reactivate}>
+					{submitting ? 'Reactivating…' : 'Reactivate user'}
 				</Button>
 			</Dialog.Footer>
 		</Dialog.Content>

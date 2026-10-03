@@ -26,7 +26,7 @@ type ManagedUserResult = { ok: true; user: typeof user.$inferSelect } | UserErro
 
 type UserAuth = Pick<
 	typeof auth.api,
-	'createUser' | 'adminUpdateUser' | 'banUser' | 'changePassword'
+	'createUser' | 'adminUpdateUser' | 'banUser' | 'unbanUser' | 'changePassword'
 >;
 
 type UserContext = {
@@ -35,7 +35,7 @@ type UserContext = {
 	headers: Headers;
 };
 
-async function runMutation(operation: () => Promise<unknown>): Promise<UserResult> {
+async function callAuth(operation: () => Promise<unknown>): Promise<UserResult> {
 	const outcome = await safeResolve(operation);
 	if (outcome.ok) return { ok: true };
 
@@ -51,18 +51,24 @@ async function runMutation(operation: () => Promise<unknown>): Promise<UserResul
 	return { ok: false, status: 500, message: INTERNAL_ERROR_MESSAGE };
 }
 
-async function editableUser(db: Database, userId: string): Promise<ManagedUserResult> {
+async function managedUser(db: Database, userId: string): Promise<ManagedUserResult> {
 	const [target] = await db
 		.select()
 		.from(user)
 		.where(and(eq(user.id, userId), eq(user.role, 'user')));
 
 	if (!target) return { ok: false, status: 404, message: 'User not found' };
-	if (target.inactive) {
+
+	return { ok: true, user: target };
+}
+
+async function editableUser(db: Database, userId: string): Promise<ManagedUserResult> {
+	const target = await managedUser(db, userId);
+	if (target.ok && target.user.inactive) {
 		return { ok: false, status: 409, message: 'Inactive users cannot be changed' };
 	}
 
-	return { ok: true, user: target };
+	return target;
 }
 
 // Reads take the database only; mutations take UserContext for Better Auth and request headers.
@@ -84,7 +90,7 @@ export async function createUser(
 	context: UserContext,
 	input: CreateUserInput
 ): Promise<UserResult> {
-	return runMutation(() =>
+	return callAuth(() =>
 		context.auth.createUser({
 			headers: context.headers,
 			body: { ...input, data: { mustChangePassword: true } }
@@ -99,7 +105,7 @@ export async function updateUser(
 	const target = await editableUser(context.db, input.userId);
 	if (!target.ok) return target;
 
-	return runMutation(() =>
+	return callAuth(() =>
 		context.auth.adminUpdateUser({
 			headers: context.headers,
 			body: {
@@ -119,10 +125,25 @@ export async function deactivateUser(context: UserContext, userId: string): Prom
 	if (!target.ok) return target;
 
 	// Better Auth blocks future logins and revokes every existing session.
-	return runMutation(() =>
+	return callAuth(() =>
 		context.auth.banUser({
 			headers: context.headers,
 			body: { userId, banReason: 'Account deactivated by administrator' }
+		})
+	);
+}
+
+export async function reactivateUser(context: UserContext, userId: string): Promise<UserResult> {
+	const target = await managedUser(context.db, userId);
+	if (!target.ok) return target;
+	if (!target.user.inactive) {
+		return { ok: false, status: 409, message: 'User is already active' };
+	}
+
+	return callAuth(() =>
+		context.auth.unbanUser({
+			headers: context.headers,
+			body: { userId }
 		})
 	);
 }
@@ -131,7 +152,7 @@ export async function changeInitialPassword(
 	context: UserContext,
 	input: InitialPasswordInput
 ): Promise<UserResult> {
-	const changed = await runMutation(() =>
+	const changed = await callAuth(() =>
 		context.auth.changePassword({
 			headers: context.headers,
 			body: {
