@@ -7,7 +7,7 @@ import type { UserProfileInput } from '$lib/schemas/user-profile.schema';
 import type { auth } from '$lib/server/auth';
 import type { Database } from '$lib/server/db/create-db';
 import { user } from '$lib/server/db/schema';
-import { INTERNAL_ERROR_MESSAGE } from '$lib/server/errors';
+import { INTERNAL_ERROR_MESSAGE, type ServiceError } from '$lib/server/errors';
 import { safeResolve } from '$lib/utils/safe-resolve';
 
 export type ListedUser = Pick<
@@ -19,10 +19,9 @@ export type UserProfile = Pick<ListedUser, 'id' | 'name' | 'email'>;
 type UpdateUserInput = UserProfileInput & { userId: string };
 type InitialPasswordInput = ChangePasswordInput & { userId: string };
 
-type UserError = { ok: false; status: number; message: string };
-type UserResult = { ok: true } | UserError;
+type UserResult = { ok: true } | ServiceError;
 
-type ManagedUserResult = { ok: true; user: typeof user.$inferSelect } | UserError;
+type ManagedUserResult = { ok: true; user: typeof user.$inferSelect } | ServiceError;
 
 type UserAuth = Pick<
 	typeof auth.api,
