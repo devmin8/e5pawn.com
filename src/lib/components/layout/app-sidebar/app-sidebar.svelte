@@ -9,7 +9,7 @@
 	import { page } from '$app/state';
 	import { authClient } from '$lib/auth-client';
 	import * as Sidebar from '$lib/components/ui/sidebar';
-	import { isNavGroup, navItems } from '$lib/components/layout/utils';
+	import { isNavGroup, isWithinNavItem, navItemsFor } from '$lib/components/layout/utils';
 	import { safeResolve } from '$lib/utils/safe-resolve';
 
 	type Props = ComponentProps<typeof Sidebar.Root>;
@@ -17,9 +17,7 @@
 	let { ref = $bindable(null), ...restProps }: Props = $props();
 
 	const pathname = $derived(page.url.pathname);
-	const visibleNavItems = $derived(
-		navItems.filter((item) => isNavGroup(item) || !item.adminOnly || page.data.isAdmin)
-	);
+	const visibleNavItems = $derived(navItemsFor(!!page.data.isAdmin));
 
 	const sidebar = Sidebar.useSidebar();
 
@@ -95,7 +93,10 @@
 								{/each}
 							</Sidebar.MenuSub>
 						{:else}
-							<Sidebar.MenuButton class="font-medium" isActive={pathname === item.url}>
+							<Sidebar.MenuButton
+								class="font-medium"
+								isActive={isWithinNavItem(pathname, item.url)}
+							>
 								{#snippet child({ props })}
 									<a href={resolve(item.url)} {...props} onclick={closeMobileSidebar}
 										>{item.title}</a

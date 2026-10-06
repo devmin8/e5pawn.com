@@ -85,6 +85,14 @@ export async function listUsers(db: Database): Promise<ListedUser[]> {
 		.orderBy(asc(user.name), asc(user.id));
 }
 
+export async function listActiveStudents(db: Database): Promise<UserProfile[]> {
+	return db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.where(and(eq(user.role, 'user'), eq(user.inactive, false)))
+		.orderBy(asc(user.name), asc(user.id));
+}
+
 export async function createUser(
 	context: UserContext,
 	input: CreateUserInput

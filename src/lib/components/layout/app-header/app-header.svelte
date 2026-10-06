@@ -7,7 +7,7 @@
 	import { ToggleTheme } from '$lib/components/toggle-theme';
 	import { breadcrumbsFor } from '$lib/components/layout/utils';
 
-	const crumbs = $derived(breadcrumbsFor(page.url.pathname));
+	const crumbs = $derived(breadcrumbsFor(page.url.pathname, page.data.pageTitle));
 </script>
 
 <header class="flex h-16 shrink-0 items-center gap-2 border-b">

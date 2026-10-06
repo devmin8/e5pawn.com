@@ -10,11 +10,14 @@ export type NavSubItem = {
 	url: Pathname;
 };
 
+type NavAudience = 'admin' | 'student';
+
 type NavLeafItem = {
 	title: string;
 	url: Pathname;
 	items?: never;
-	adminOnly?: boolean;
+	// Omit to show the item to everyone.
+	audience?: NavAudience;
 };
 
 type NavGroupItem = {
@@ -31,17 +34,36 @@ export function isNavGroup(item: NavItem): item is NavGroupItem {
 
 export const navItems: NavItem[] = [
 	{
-		title: 'Home',
-		url: '/'
+		title: 'Puzzles',
+		url: '/puzzles',
+		audience: 'admin'
+	},
+	{
+		title: 'My puzzles',
+		url: '/my-puzzles',
+		audience: 'student'
 	},
 	{
 		title: 'Users',
 		url: '/users',
-		adminOnly: true
+		audience: 'admin'
 	}
 ];
 
-export function breadcrumbsFor(pathname: string): Crumb[] {
+export function navItemsFor(isAdmin: boolean): NavItem[] {
+	const audience: NavAudience = isAdmin ? 'admin' : 'student';
+	return navItems.filter(
+		(item) => isNavGroup(item) || !item.audience || item.audience === audience
+	);
+}
+
+/** True for the nav item's own page and every page nested under it. */
+export function isWithinNavItem(pathname: string, url: string): boolean {
+	return pathname === url || (url !== '/' && pathname.startsWith(`${url}/`));
+}
+
+/** `pageTitle` names a nested page, turning its nav item into a link back. */
+export function breadcrumbsFor(pathname: string, pageTitle?: string): Crumb[] {
 	for (const item of navItems) {
 		if (isNavGroup(item)) {
 			const subItem = item.items.find((entry) => entry.url === pathname);
@@ -52,10 +74,14 @@ export function breadcrumbsFor(pathname: string): Crumb[] {
 			continue;
 		}
 
-		if (item.url === pathname) {
+		if (isWithinNavItem(pathname, item.url)) {
+			if (pageTitle && pathname !== item.url) {
+				return [{ label: item.title, href: item.url }, { label: pageTitle }];
+			}
+
 			return [{ label: item.title }];
 		}
 	}
 
-	return [{ label: 'Home', href: '/' }];
+	return [];
 }

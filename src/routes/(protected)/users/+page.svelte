@@ -1,6 +1,12 @@
 <script lang="ts">
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import UserCheckIcon from '@lucide/svelte/icons/user-check';
+	import UserXIcon from '@lucide/svelte/icons/user-x';
+
+	import { RowActions } from '$lib/components/table';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Table from '$lib/components/ui/table';
 	import {
 		AddUserDialog,
@@ -61,43 +67,40 @@
 					{/if}
 				</Table.Cell>
 				<Table.Cell class="text-right">
-					{#if !user.inactive}
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label={`Edit ${user.name}`}
-							onclick={() => {
-								selectedUser = user;
-								editing = true;
-							}}
-						>
-							Edit
-						</Button>
-
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label={`Deactivate ${user.name}`}
-							onclick={() => {
-								selectedUser = user;
-								deactivating = true;
-							}}
-						>
-							Deactivate
-						</Button>
-					{:else}
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label={`Reactivate ${user.name}`}
-							onclick={() => {
-								selectedUser = user;
-								reactivating = true;
-							}}
-						>
-							Reactivate
-						</Button>
-					{/if}
+					<RowActions label={user.name}>
+						{#if !user.inactive}
+							<DropdownMenu.Item
+								onclick={() => {
+									selectedUser = user;
+									editing = true;
+								}}
+							>
+								<PencilIcon />
+								Edit
+							</DropdownMenu.Item>
+							<DropdownMenu.Separator />
+							<DropdownMenu.Item
+								variant="destructive"
+								onclick={() => {
+									selectedUser = user;
+									deactivating = true;
+								}}
+							>
+								<UserXIcon />
+								Deactivate
+							</DropdownMenu.Item>
+						{:else}
+							<DropdownMenu.Item
+								onclick={() => {
+									selectedUser = user;
+									reactivating = true;
+								}}
+							>
+								<UserCheckIcon />
+								Reactivate
+							</DropdownMenu.Item>
+						{/if}
+					</RowActions>
 				</Table.Cell>
 			</Table.Row>
 		{:else}

@@ -10,9 +10,12 @@ declare global {
 			user?: Session['user'];
 			session?: Session['session'];
 		}
+		interface PageData {
+			/** Shown after the nav item in the header breadcrumb on nested pages. */
+			pageTitle?: string;
+		}
 		// interface Error {}
 		// interface Locals {}
-		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
 	}

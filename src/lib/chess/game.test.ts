@@ -1,7 +1,7 @@
 import { DEFAULT_POSITION } from 'chess.js';
 import { describe, expect, test } from 'vitest';
 
-import { ChessGame, type PromotionPiece } from './game';
+import { ChessGame, positionAfterMoves, type PromotionPiece } from './game';
 
 describe('ChessGame', () => {
 	test('allows only the active side to move and preserves the position on illegal input', () => {
@@ -99,9 +99,10 @@ describe('ChessGame', () => {
 		expect(game.position.status).toBe('stalemate');
 		expect(game.position.inCheck).toBe(false);
 		expect(game.position.legalMoves.size).toBe(0);
+		expect(game.move('h8', 'h7')).toEqual({ kind: 'illegal' });
 	});
 
-	test('stops play after threefold repetition and restores play on undo', () => {
+	test('allows puzzle play after threefold repetition', () => {
 		const game = new ChessGame();
 		for (let i = 0; i < 2; i++) {
 			game.move('g1', 'f3');
@@ -110,10 +111,42 @@ describe('ChessGame', () => {
 			game.move('f6', 'g8');
 		}
 		expect(game.position.status).toBe('draw');
-		expect(game.position.legalMoves.size).toBe(0);
-		expect(game.move('e2', 'e4')).toEqual({ kind: 'illegal' });
-		game.undo();
+		expect(game.position.legalMoves.get('e2')).toContain('e4');
+		expect(game.move('e2', 'e4')).toEqual({ kind: 'moved' });
 		expect(game.position.status).toBe('playing');
+		game.undo();
+		expect(game.position.status).toBe('draw');
+		expect(game.position.legalMoves.size).toBeGreaterThan(0);
+	});
+
+	test('allows puzzle play and solution playback after the fifty-move limit', () => {
+		const fen = '7k/8/5KQ1/8/8/8/8/8 w - - 100 1';
+		const game = new ChessGame(fen);
+		expect(game.position.status).toBe('draw');
+		expect(game.position.legalMoves.get('g6')).toContain('g7');
+		expect(game.moveUci('g6g7')).toEqual({ kind: 'moved' });
+		expect(game.position.status).toBe('checkmate');
+
+		const replay = positionAfterMoves(fen, ['g6g7']);
+		expect(replay.status).toBe('checkmate');
+		expect(replay.history).toEqual([{ uci: 'g6g7', san: 'Qg7#' }]);
+	});
+
+	test('allows puzzle play with insufficient mating material', () => {
+		const game = new ChessGame('7k/8/6K1/8/8/8/8/8 w - - 0 1');
+		expect(game.position.status).toBe('draw');
+		expect(game.position.legalMoves.get('g6')).toContain('f6');
+		expect(game.move('g6', 'f6')).toEqual({ kind: 'moved' });
+	});
+
+	test('records played moves as UCI and SAN, including promotion', () => {
+		const game = new ChessGame('4k3/P7/8/8/8/8/8/4K3 w - - 0 1');
+		expect(game.moveUci('a7a8q')).toEqual({ kind: 'moved' });
+		expect(game.moveUci('e8d7')).toEqual({ kind: 'moved' });
+		expect(game.position.history).toEqual([
+			{ uci: 'a7a8q', san: 'a8=Q+' },
+			{ uci: 'e8d7', san: 'Kd7' }
+		]);
 	});
 
 	test('undo and reset restore history, turn, and the original position', () => {
